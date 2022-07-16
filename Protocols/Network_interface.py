@@ -1,8 +1,10 @@
+from .base import microinterface, randbytes
+
 class ARP(microinterface):
     class Message:
         # Hardware address format
         ETH = 1  # ethernet hardware
-        IEEE802	= 6  # IEEE 802 hardware
+        IEEE802 = 6  # IEEE 802 hardware
 
         # Protocol address format
         IP = 0x0800  # IP protocol

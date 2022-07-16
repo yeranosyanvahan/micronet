@@ -14,13 +14,15 @@ class microsocket:
 
 
 class microinterface:
-    def __init__(self,src: microsocket, dst: microsocket):
+    def __init__(self,src: microsocket, dst: microsocket, device):
         self.src = src
         self.dst = dst
-    def resv(self, nunits = 1):
-        pass
+        self.device = device
+    def resv(self):
+        for unit in self.device.resv():
+            yield unit
     def send(self, payload):
-        pass
+        self.device.send(payload)
 
 class microbuffer(microinterface):
     def __init__(self,*args,**kwargs):
