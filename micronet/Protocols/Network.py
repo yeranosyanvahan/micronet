@@ -27,8 +27,8 @@ class IP(microinterface):
             }
         def pack(self):
          return struct.pack('!BBHHHBBHII',
-          (self.version  & 0b00001111) +\
-          (self.ihl << 4),
+          (self.version << 4) +\
+          (self.ihl & 0b00001111),
            self.tos,
            self.length,
            self.id,
