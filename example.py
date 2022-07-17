@@ -1,7 +1,7 @@
 from machine import Pin, SPI
 from Protocols import microsocket, microinterface
 from drivers import ENC28J60
-
+#
 eth = ENC28J60(spi = SPI(0, baudrate=10000000,
               sck=Pin(18),
               mosi=Pin(19),
