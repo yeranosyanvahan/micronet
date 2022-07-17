@@ -62,9 +62,9 @@ class DHCP:
 
 
     @microinterface.protocol_wrapper
-    def __init__(self, src: microsocket, dst: microsocket):
+    def __init__(self, interface):
         message = DHCP.Message()
-        message.chaddr = self.src.mac
+        message.chaddr = interface.src.mac
 
     def discover(self):
         return self.message.pack()

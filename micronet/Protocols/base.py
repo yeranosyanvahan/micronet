@@ -29,7 +29,6 @@ class microinterface:
             self.__class__.src = property(lambda self: self.interface.src)
             self.__class__.dst = property(lambda self: self.interface.dst)
             return func(self,interface)
-        new_func.__name__ = func.__name__
         return new_func
 
         
