@@ -14,5 +14,9 @@ setup(
     author_email='vahan@yeranosyanvahan.com',
     maintainer='Vahan Yeranosyan',
     maintainer_email='vahan@yeranosyanvahan.com',
-    license='MIT'
+    license='MIT',
+    classifiers = [
+        'Programming Language :: Python :: Implementation :: MicroPython',
+        'License :: OSI Approved :: MIT License',
+    ],
 )
