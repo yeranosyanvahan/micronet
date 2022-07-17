@@ -1,8 +1,9 @@
-from setuptools import setup
+from setuptools import setup,find_packages
 
 setup(    
     name='micropython-micronet',
-    packages=['micronet'],
+    packages=find_packages(),
+    
     description='MicroPython library for networking',
     long_description_content_type="text/markdown",
     long_description="MicroPython library for networking",
