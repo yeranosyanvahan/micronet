@@ -6,12 +6,19 @@ class HTTP:
 class DHCP:
     class Message:
         class Options:
+            DISCOVER = 0x01
+            OFFER = 0x02
+            REQUEST = 0x03
+            ACK = 0x04
+            
             def __init__(self):
                 self.option = {}
             def __setitem__(self, key, value):
                 self.option[key] = value
             def __getitem__(self,key):
                 return self.option[key]
+            def __contains__(self,key):
+                return key in self.option
             def pack(self):
                 result = []
                 for option, value in self.option.items():
@@ -32,8 +39,8 @@ class DHCP:
                       value = data[2:2+length]
                       data = data[2+length:]
                       option[key] = value
-                if(len(data) and data[0]==255):
-                    return option
+                return option
+                
                     
                     
         
@@ -52,7 +59,7 @@ class DHCP:
         sname:    0x64b*8 = b'\x00' * 64
         file:     0x128b*8= b'\x00' * 128
         mcookie:  0x4b*8 = bytearray([0x63,0x82,0x53,0x63])
-        options:  DHCP.Message.Options 
+        options:  Options 
             
         def __init__(self):
             self.options = DHCP.Message.Options()
@@ -92,7 +99,8 @@ class DHCP:
             message.chaddr = data[28:28+16]
             message.sname = data[44:44+64]
             message.file = data[108:108+128]
-            message.options =  DHCP.Message.Options.unpack(data[236:])
+            message.mcookie = data[236:236+4]
+            message.options =  DHCP.Message.Options.unpack(data[240:])
 
             return message
         
@@ -106,25 +114,44 @@ class DHCP:
         self.message = message
         
     def discover(self):
-        self.message.options[53] = bytearray([1])
+        self.message.options[53] = bytearray([DHCP.Message.Options.DISCOVER])
         self.message.options[55] = bytearray([1,3,6])
-        self.message.options[61] = bytearray([0x01]) + self.src.mac
+#        self.message.options[61] = bytearray([0x01]) + self.src.mac
         self.message.options[12] = self.src.hostname.encode()
-        return self.message.pack()
     
-    def offer(self, data):
-        message = DHCP.Message.unpack(data)
-        if(self.message.xid == message.xid):
-            return message.pack()
+    def offer(self, message):
+        if(self.message.xid == message.xid and message.options[53][0]==DHCP.Message.Options.OFFER):
+            self.message.ciaddr = message.yiaddr
+            self.message.siaddr = message.siaddr
+            if(54 in message.option):
+                self.message.option[54] = message.option[54]
+            return True
         return False
     
     def request(self):
-        pass
-    def acknowledge(self):        
-        pass
-    def run(self):
-        self.discover()
-        self.offer()
-        self.request()
-        self.acknowledge()
-
+        self.message.options[53] = bytearray([DHCP.Message.Options.REQUEST])
+        self.message.options[50] = self.message.ciadd
+        return self.message.pack()
+        
+    def acknowledge(self, message):        
+        if(self.message.xid == message.xid and message.options[53][0]==DHCP.Message.Options.ACK):
+            self.message = message
+            return True
+        return False
+    
+    def resv(self):
+        for data in self.interface.resv():
+            yield DHCP.Message.unpack(data)
+    
+    def send(self, message):
+        self.interface.send(message.pack())        
+        
+    def run(self):        
+        self.send(self.discover())
+        for message in self.resv():
+            if(self.offer(message)):
+                break          
+        self.send(self.request())
+        for message in self.resv():
+            if(self.acknowledge(message)):
+                break 

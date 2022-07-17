@@ -90,7 +90,7 @@ class IP(microinterface):
     
     def decapsulate(self, packet):
         header = IP.Header.unpack(packet[:IP.Header.MINSIZE])
-        return packet[header.ihl * 4:]
+        return packet[IP.Header.MINSIZE:]
     
     def resv(self):
         for packet in self.interface.resv():

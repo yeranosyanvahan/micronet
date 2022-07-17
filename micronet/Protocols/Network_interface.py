@@ -89,7 +89,6 @@ class ETH:
                self.fcs
 
     def decapsulate(self, frame):
-        print(frame)
         return frame[14:-4]
 
     def resv(self):
