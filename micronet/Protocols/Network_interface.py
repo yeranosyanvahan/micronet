@@ -13,8 +13,6 @@ class ARP(microinterface):
         # ARP operation
         REQUEST     = 1# request to resolve ha given pa
         REPLY       = 2# response giving hardware address
-        REVREQUEST  = 3# request to resolve pa given ha
-        REVREPLY    = 4# response giving protocol address
         
         HT: 0x2b*8 = ETH
         PT: 0x2b*8 = IP
@@ -51,13 +49,33 @@ class ARP(microinterface):
             arp.T_HA = message[18:18+6]
             return arp
         
+    def resv(self):
+        for data in self.interface.resv():
+            yield ARP.Message.unpack(data)
+    
+    def send(self, message):
+        self.interface.send(message.pack())        
+        
+    def request(self):
+        self.OP = ARP.Message.REQUEST
+        self.message.T_L32 = self.dst.IP
+        self.message.T_HA  = self.dst.mac
+        self.send(self.message)
+
+    def parse(self, message):
+        if(message.T_L32 == self.message.S_L32 and
+           message.T_HA == b'\x00'*6):
+            self.message.T_L32 = message.S_L32
+            self.message.T_HA  = message.S_HA
+        self.send()
+            
+        
+        
     @microinterface.protocol_wrapper
     def __init__(self,interface):
         self.message = ARP.Message()
         self.message.S_L32 = self.src.IP
         self.message.S_HA  = self.src.mac
-        self.message.T_L32 = self.dst.IP
-        self.message.T_HA  = self.dst.mac
         
 
 class ETH:
