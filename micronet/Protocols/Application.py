@@ -1,4 +1,4 @@
-from .base import microinterface, microsocket
+from .base import microinterface, microsocket, randbytes
 import struct
 
 class HTTP:
@@ -15,7 +15,7 @@ class DHCP:
         ciaddr:   0x4b*8 = 0
         yiaddr:   0x4b*8 = 0
         siaddr:   0x4b*8 = 0
-        giaddr:   0x4b*8= 0
+        giaddr:   0x4b*8 = 0
         chaddr:   0x16b*8
         sname:    0x64b*8= b""
         file:     0x128b*8= b""
@@ -65,7 +65,9 @@ class DHCP:
     def __init__(self, interface):
         message = DHCP.Message()
         message.chaddr = interface.src.mac
-
+        (message.xid,) = struct.unpack('I',randbytes(4))
+        self.message = message
+        
     def discover(self):
         return self.message.pack()
     def offer(self):
@@ -79,3 +81,4 @@ class DHCP:
         self.offer()
         self.request()
         self.acknowledge()
+
