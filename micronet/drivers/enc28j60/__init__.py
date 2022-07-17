@@ -9,7 +9,7 @@ class driver:
         nic = self.nic
         buf = bytearray(enc28j60.ENC28J60_ETH_RX_BUFFER_SIZE)
         while nic.GetRxPacketCnt():
-            length = eth.ReceivePacket(buf)
+            length = nic.ReceivePacket(buf)
             yield buf[:length]
     
     def send(self, payload):

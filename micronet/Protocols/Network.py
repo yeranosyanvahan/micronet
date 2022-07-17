@@ -3,6 +3,21 @@ from .base import microinterface, randbytes
 import struct
 
 class IP(microinterface):
+    def checksum(data):
+        checksum = 0
+        data_len = len(data)
+        if (data_len % 2):
+            data_len += 1
+            data += struct.pack('!B', 0)
+        
+        for i in range(0, data_len, 2):
+            w = (data[i] << 8) + (data[i + 1])
+            checksum += w
+
+        checksum = (checksum >> 16) + (checksum & 0xFFFF)
+        checksum = ~checksum & 0xFFFF
+        return checksum
+    
     class Header:
         MINSIZE = 20
         version: 0x4b = 0x04
@@ -13,7 +28,7 @@ class IP(microinterface):
         flags: 0x3b = 0b010 
         offset: 0x13b = 0
         ttl: 0x8b = 128
-        protocol: 0x8b = 6 # tcp
+        protocol: 0x8b = 17 # UDP
         header_checksum: 0x16b = 0
         srcIP: 0x32b
         dstIP: 0x32b
@@ -68,7 +83,10 @@ class IP(microinterface):
 
     def encapsulate(self, payload):
         self.header.length = len(payload) + self.header.ihl * 4
-        return self.header.pack() + payload
+        self.header.header_checksum = IP.checksum(self.header.pack())
+        Result = self.header.pack() + payload
+        self.header.header_checksum = 0
+        return Result
     
     def decapsulate(self, packet):
         header = IP.Header.unpack(packet[:IP.Header.MINSIZE])

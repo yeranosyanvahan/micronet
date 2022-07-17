@@ -4,9 +4,9 @@ def randbytes(n):
     return bytearray([getrandbits(8) for _ in range(n)])
 
 class microsocket:
-    def __init__(self, mac, IP, port, domain, crt = None):
+    def __init__(self, mac, IP, port, hostname, crt = None):
         self.crt = crt
-        self.domain = domain
+        self.hostname = hostname
         (self.IP,) = struct.unpack('!I', struct.pack('!BBBB', 
         *map(int, (IP.split('.')))))
         self.port = port

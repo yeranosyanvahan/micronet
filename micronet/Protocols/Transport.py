@@ -1,23 +1,38 @@
 from .base import microinterface, randbytes
 import struct
 class UDP(microinterface):
-    TIMEOUT = 60 
+    TIMEOUT = 60
+    def checksum(data):
+        checksum = 0
+        data_len = len(data)
+        if (data_len % 2):
+            data_len += 1
+            data += struct.pack('!B', 0)
+        
+        for i in range(0, data_len, 2):
+            w = (data[i] << 8) + (data[i + 1])
+            checksum += w
+
+        checksum = (checksum >> 16) + (checksum & 0xFFFF)
+        checksum = ~checksum & 0xFFFF
+        return checksum
+    
     class PseudoHeader:
         srcIP: 0x32b
         dstIP: 0x32b
-        reserved: 0x8b
-        protocol: 0x8b
+        reserved: 0x8b = 0
+        protocol: 0x8b =  17 #UDP
         segmentlength: 0x16b
         
         def pack(self):
-            struct.pack('!IIHH',
+            return struct.pack('!IIHH',
                         self.srcIP,    
                         self.dstIP,    
                         self.protocol,                
-                        self.tcplength)
+                        self.segmentlength)
             
         def unpack(segmentheader):
-            header = TCP.Header()
+            header = UDP.Header()
             (self.srcIP,    
              self.dstIP,    
              self.protocol,                
@@ -29,38 +44,44 @@ class UDP(microinterface):
         
         srcport: 0x16b
         dstport: 0x16b
-        length: 0x16b
+        segmentlength: 0x16b
         checksum: 0x16b = 0
         def pack(self):
           return struct.pack("!hhhh", 
             self.srcport, 
             self.dstport,
-            self.length,
+            self.segmentlength,
             self.checksum)
     
         def unpack(segmentheader):
             header = UDP.Header()
             (header.srcport, 
              header.dstport,
-             header.length,
+             header.segmentlength,
              header.checksum) = struct.unpack("!hhhh", segmentheader)
             return header
     
     @microinterface.protocol_wrapper
     def __init__(self, interface : microinterface ):
         self.header = UDP.Header()
+        self.pseudoheader = UDP.PseudoHeader()
         self.header.srcport = interface.src.port
         self.header.dstport = interface.dst.port
+        self.pseudoheader.srcIP = interface.src.IP
+        self.pseudoheader.dstIP = interface.dst.IP
                 
 
     def encapsulate(self, payload):
-        self.header.length = len(payload) + UDP.Header.SIZE
-        return self.header.pack() + payload
+        self.header.segmentlength = len(payload) + UDP.Header.SIZE
+        self.pseudoheader.segmentlength = len(payload) + UDP.Header.SIZE
+        self.header.checksum = UDP.checksum(self.pseudoheader.pack() + self.header.pack() + payload)
+        Result = self.header.pack() + payload
+        self.header.checksum  = 0
+        return Result
 
     def decapsulate(self, segment):
-        header = UDP.Header.unpack(segment[:UDP.Header.SIZE])
-        payload = segment[UDP.Header.SIZE:]        
-        return payload
+        self.header = UDP.Header.unpack(segment[:UDP.Header.SIZE])       
+        return segment[UDP.Header.SIZE:]  
     
     def resv(self):
         for segment in self.interface.resv():
@@ -70,7 +91,8 @@ class UDP(microinterface):
         self.interface.send(self.encapsulate(payload))
         
 class TCP:
-    TIMEOUT = 60 
+    TIMEOUT = 60
+    checksum = UDP.checksum
     PseudoHeader = UDP.PseudoHeader
         
     class Header:
