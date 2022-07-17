@@ -13,4 +13,4 @@ class driver:
             yield buf[:length]
     
     def send(self, payload):
-        self.nic.SendPacket(payload)
+        self.nic.SendPacket([payload])

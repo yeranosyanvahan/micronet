@@ -17,8 +17,8 @@ class DHCP:
         siaddr:   0x4b*8 = 0
         giaddr:   0x4b*8 = 0
         chaddr:   0x16b*8
-        sname:    0x64b*8= b""
-        file:     0x128b*8= b""
+        sname:    0x64b*8 = b'\x00' * 64
+        file:     0x128b*8= b'\x00' * 128
         options:  None   = bytearray([0x63,0x82,0x53,0x63])
 
         def pack(self):
@@ -34,9 +34,9 @@ class DHCP:
                self.yiaddr, 
                self.siaddr, 
                self.giaddr) +\
-               self.chaddr.rjust(16, b'\x00')  +\
-               self.sname.rjust(64, b'\x00')   +\
-               self.file.rjust(128, b'\x00')    +\
+               self.chaddr +\
+               self.sname +\
+               self.file +\
                self.options 
         
         def unpack(data):
@@ -64,7 +64,7 @@ class DHCP:
     @microinterface.protocol_wrapper
     def __init__(self, interface):
         message = DHCP.Message()
-        message.chaddr = interface.src.mac
+        message.chaddr = interface.src.mac +  b'\x00' * 8 
         (message.xid,) = struct.unpack('I',randbytes(4))
         self.message = message
         
