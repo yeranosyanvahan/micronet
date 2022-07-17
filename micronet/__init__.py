@@ -1,3 +1,3 @@
 from .micronet import *
-import Protocols
-import drivers
+import micronet.Protocols
+import micronet.drivers
