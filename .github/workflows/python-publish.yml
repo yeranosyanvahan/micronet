@@ -9,12 +9,7 @@
 name: Upload Python Package
 
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+on: create
 
 jobs:
   deploy:
