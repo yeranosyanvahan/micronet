@@ -4,10 +4,9 @@ import sys
 sys.path.pop(0)
 from setuptools import setup
 
-setup(
+setup(    
     name='micropython-micronet',
     py_modules=['micronet'],
-    version='0.0.1',
     description='MicroPython library for networking',
     long_description_content_type="text/markdown",
     long_description="MicroPython library for networking",
@@ -21,4 +20,9 @@ setup(
         'Programming Language :: Python :: Implementation :: MicroPython',
         'License :: OSI Approved :: MIT License',
     ],
+    setuptools_git_versioning={
+        "enabled": True,
+    },
+    setup_requires=["setuptools-git-versioning"],
+
 )
