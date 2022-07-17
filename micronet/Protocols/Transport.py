@@ -46,8 +46,8 @@ class UDP(microinterface):
              header.checksum) = struct.unpack("!hhhh", segmentheader)
             return header
     
+    @microinterface.protocol_wrapper
     def __init__(self, interface : microinterface ):
-        self.interface = interface
         self.header = UDP.Header()
         self.header.srcport = interface.src.port
         self.header.dstport = interface.dst.port
@@ -133,10 +133,8 @@ class TCP:
                     self.urgent_pointer              
                 )
                 
-
+    @microinterface.protocol_wrapper
     def __init__(self, interface: microinterface):   
-        super().__init__(iterface.src,interface.dst)
-        self.interface = interface
         self.header = TCP.Header()
         self.header.srcport = interface.src.port
         self.header.dstport = interface.dst.port

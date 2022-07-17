@@ -58,10 +58,9 @@ class IP(microinterface):
            header.flags   = flags & 0b111
            header.offset = flags >> 3
            return header
-
+    
+    @microinterface.protocol_wrapper
     def __init__(self, interface):
-        super().__init__(interface.src,interface.dst)
-        self.interface=interface
         self.header = IP.Header()
         self.header.srcIP = self.src.IP
         self.header.dstIP = self.dst.IP

@@ -1,4 +1,5 @@
 from .base import microinterface, randbytes
+import struct
 
 class ARP(microinterface):
     class Message:
@@ -50,9 +51,8 @@ class ARP(microinterface):
             arp.T_HA = message[18:18+6]
             return arp
         
+    @microinterface.protocol_wrapper
     def __init__(self,interface):
-        super().__init__(interface.src,interface.dst)
-        self.interface=interface
         self.message = ARP.Message()
         self.message.S_L32 = self.src.IP
         self.message.S_HA  = self.src.mac
@@ -70,9 +70,9 @@ class ETH:
     ethertype: 0x2b*8 = IP
     payload:   bin
     fcs:       0x4b*8 
-            
+     
+    @microinterface.protocol_wrapper
     def __init__(self, interface : microinterface ):
-        self.interface = interface
         self.dstmac = interface.dst.mac
         self.srcmac = interface.src.mac
 
@@ -84,6 +84,7 @@ class ETH:
         
         return self.dstmac +\
                self.srcmac +\
+               struct.pack('!H',self.ethertype) +\
                payload     +\
                self.fcs
 

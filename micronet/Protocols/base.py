@@ -23,15 +23,24 @@ class microinterface:
             yield unit
     def send(self, payload):
         self.device.send(payload)
+    def protocol_wrapper(func):
+        def new_func(self, interface):
+            self.interface = interface
+            self.__class__.src = property(lambda self: self.interface.src)
+            self.__class__.dst = property(lambda self: self.interface.dst)
+            return func(self,interface)
+        new_func.__name__ = func.__name__
+        return new_func
 
+        
 class microbuffer(microinterface):
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
+    def __init__(self):
         self.buffer = []
                   
     def resv(self,nunits = 1):
-        for b in self.buffer:
-            yield b
+        for _ in range(len(self.buffer)):
+            yield self.buffer.pop()
+
         
     def send(self,payload):
         self.buffer.append(payload)

@@ -58,24 +58,24 @@ class DHCP:
             message.options = data[236:]
 
             return message
-    class Client:
-       def __init__(self, src: microsocket, dst: microsocket):
-            self.src = src
-            self.dst = dst
-                
-       def discover(self):
+        
+
+
+    @microinterface.protocol_wrapper
+    def __init__(self, src: microsocket, dst: microsocket):
         message = DHCP.Message()
         message.chaddr = self.src.mac
-        
-       def offer(self):
+
+    def discover(self):
+        return self.message.pack()
+    def offer(self):
         pass
-       def request(self):
+    def request(self):
         pass
-       def acknowledge(self):        
+    def acknowledge(self):        
         pass
-       def run(self):
+    def run(self):
         self.discover()
         self.offer()
         self.request()
         self.acknowledge()
-    
