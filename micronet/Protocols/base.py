@@ -1,7 +1,7 @@
 import struct
+from random import getrandbits
 def randbytes(n):
-    from random import randbytes
-    return randbytes(n)
+    return bytearray([getrandbits(8) for _ in range(n)])
 
 class microsocket:
     def __init__(self, mac, IP, port, domain, crt = None):
