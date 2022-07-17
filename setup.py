@@ -1,10 +1,8 @@
-import sys
-# Remove current dir from sys.path, otherwise setuptools will peek up our
-# module instead of system.
-sys.path.pop(0)
 from setuptools import setup
+import sdist_upip
 
 setup(    
+    cmdclass={'sdist': sdist_upip.sdist},
     name='micropython-micronet',
     packages=['micronet'],
     description='MicroPython library for networking',
