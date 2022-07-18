@@ -10,7 +10,7 @@ class DHCP:
             DISCOVER = 0x01
             OFFER = 0x02
             REQUEST = 0x03
-            ACK = 0x04
+            ACK = 0x05
             
             def __init__(self):
                 self.option = {}
@@ -125,8 +125,8 @@ class DHCP:
         if(self.message.xid == message.xid and message.options[53][0]==DHCP.Message.Options.OFFER):
             self.message.ciaddr = message.yiaddr
             self.message.siaddr = message.siaddr
-            if(54 in message.option):
-                self.message.option[54] = message.option[54]
+            if(54 in message.options):
+                self.message.options[54] = message.options[54]
             return True
         return False
     

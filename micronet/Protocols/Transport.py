@@ -47,7 +47,7 @@ class UDP(microinterface):
         segmentlength: 0x16b
         checksum: 0x16b = 0
         def pack(self):
-          return struct.pack("!hhhh", 
+          return struct.pack("!HHHH", 
             self.srcport, 
             self.dstport,
             self.segmentlength,
@@ -58,7 +58,7 @@ class UDP(microinterface):
             (header.srcport, 
              header.dstport,
              header.segmentlength,
-             header.checksum) = struct.unpack("!hhhh", segmentheader)
+             header.checksum) = struct.unpack("!HHHH", segmentheader)
             return header
     
     @microinterface.protocol_wrapper
@@ -80,7 +80,7 @@ class UDP(microinterface):
         return Result
 
     def decapsulate(self, segment):
-        header = UDP.Header.unpack(segment[:UDP.Header.SIZE])       
+        header = UDP.Header.unpack(segment[:UDP.Header.SIZE])
         return segment[UDP.Header.SIZE:]  
     
     def resv(self):
