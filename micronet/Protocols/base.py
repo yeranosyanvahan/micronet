@@ -7,8 +7,7 @@ class microsocket:
     def __init__(self, mac, IP, port, hostname, crt = None):
         self.crt = crt
         self.hostname = hostname
-        (self.IP,) = struct.unpack('!I', struct.pack('!BBBB', 
-        *map(int, (IP.split('.')))))
+        self.IP = IP
         self.port = port
         self.mac = mac    
 

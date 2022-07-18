@@ -9,6 +9,7 @@ class ARP(microinterface):
 
         # Protocol address format
         IP = 0x0800  # IP protocol
+        ARP = 0x0806
 
         # ARP operation
         REQUEST     = 1# request to resolve ha given pa
@@ -61,6 +62,7 @@ class ARP(microinterface):
         self.message.T_L32 = self.dst.IP
         self.message.T_HA  = self.dst.mac
         self.send(self.message)
+                
 
     def parse(self, message):
         if(message.T_L32 == self.message.S_L32 and
@@ -79,39 +81,45 @@ class ARP(microinterface):
         
 
 class ETH:
-    # Ethertype
-    IP  = 0x0800  
-    ARP = 0x0806  
+    class Header:
+        # Ethertype
+        IP  = 0x0800  
+        ARP = 0x0806  
 
-    dstmac:    0x6b*8
-    srcmac:    0x6b*8
-    ethertype: 0x2b*8 = IP
-    payload:   bin
-    fcs:       0x4b*8 
+        dstmac:    0x6b*8
+        srcmac:    0x6b*8
+        ethertype: 0x2b*8 = IP
+        
+        def pack(self):
+         return self.dstmac +\
+                self.srcmac +\
+                struct.pack('!H',self.ethertype)
+    
+        def unpack(frameheader):
+           header = ETH.Header()
+           header.dstmac = frameheader[:6]
+           header.srcmac = frameheader[6:6+6]
+           header.ethertype = struct.unpack('!H',frameheader[12:12+2])
+           return header
+        
      
     @microinterface.protocol_wrapper
     def __init__(self, interface : microinterface ):
-        self.dstmac = interface.dst.mac
-        self.srcmac = interface.src.mac
+        self.header = ETH.Header()
+        self.header.dstmac = interface.dst.mac
+        self.header.srcmac = interface.src.mac
 
-    def crc(self, payload):
-        return b'\x00\x00\x00\x00'
-    
+
     def encapsulate(self, payload):
-        self.fcs = self.crc(payload)
-        
-        return self.dstmac +\
-               self.srcmac +\
-               struct.pack('!H',self.ethertype) +\
-               payload     +\
-               self.fcs
+        return self.header.pack() + payload
 
-    def decapsulate(self, frame):
-        return frame[14:-4]
+
+    def decapsulate(self, frame):        
+        return ETH.Header.unpack(frame[:14]), frame[14:]
 
     def resv(self):
-        for segment in self.interface.resv():
-         yield self.decapsulate(segment)
+        for (_, frame) in self.interface.resv():
+         yield self.decapsulate(frame)
 
     def send(self, payload):
         self.interface.send(self.encapsulate(payload))

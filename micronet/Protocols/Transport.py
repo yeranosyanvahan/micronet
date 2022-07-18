@@ -25,18 +25,17 @@ class UDP(microinterface):
         segmentlength: 0x16b
         
         def pack(self):
-            return struct.pack('!IIHH',
-                        self.srcIP,    
-                        self.dstIP,    
-                        self.protocol,                
-                        self.segmentlength)
+            return self.srcIP +\
+                   self.dstIP + struct.pack('!HH', 
+                   self.protocol,                
+                   self.segmentlength)
             
         def unpack(segmentheader):
             header = UDP.Header()
-            (self.srcIP,    
-             self.dstIP,    
-             self.protocol,                
-             self.segmentlength) = struct.unpack('!IIHH', segmentheader)
+            self.srcIP = segmentheader[:4]  
+            self.dstIP = segmentheader[4:4+4]    
+            (self.protocol,                
+            self.segmentlength) = struct.unpack('!HH', segmentheader[8:])
             return header
         
     class Header:
@@ -81,10 +80,10 @@ class UDP(microinterface):
 
     def decapsulate(self, segment):
         header = UDP.Header.unpack(segment[:UDP.Header.SIZE])
-        return segment[UDP.Header.SIZE:]  
+        return header, segment[UDP.Header.SIZE:]  
     
     def resv(self):
-        for segment in self.interface.resv():
+        for (_, segment) in self.interface.resv():
          yield self.decapsulate(segment)
     
     def send(self, payload):

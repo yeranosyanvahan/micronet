@@ -2,22 +2,7 @@ from .base import microinterface, randbytes
 
 import struct
 
-class IP(microinterface):
-    def checksum(data):
-        checksum = 0
-        data_len = len(data)
-        if (data_len % 2):
-            data_len += 1
-            data += struct.pack('!B', 0)
-        
-        for i in range(0, data_len, 2):
-            w = (data[i] << 8) + (data[i + 1])
-            checksum += w
-
-        checksum = (checksum >> 16) + (checksum & 0xFFFF)
-        checksum = ~checksum & 0xFFFF
-        return checksum
-    
+class IP(microinterface):    
     class Header:
         MINSIZE = 20
         version: 0x4b = 0x04
@@ -41,7 +26,7 @@ class IP(microinterface):
                 'ICMP': 1
             }
         def pack(self):
-         return struct.pack('!BBHHHBBHII',
+         return struct.pack('!BBHHHBBH',
           (self.version << 4) +\
           (self.ihl & 0b00001111),
            self.tos,
@@ -51,9 +36,27 @@ class IP(microinterface):
            self.offset << 3,
            self.ttl,
            self.protocol,
-           self.header_checksum,
-           self.srcIP,
-           self.dstIP)
+           self.header_checksum) + \
+           self.srcIP +\
+           self.dstIP
+        
+        def checksum(header):
+            header.header_checksum = 0
+            data = header.pack()
+            checksum = 0
+            data_len = len(data)
+            if (data_len % 2):
+                data_len += 1
+                data += struct.pack('!B', 0)
+            
+            for i in range(0, data_len, 2):
+                w = (data[i] << 8) + (data[i + 1])
+                checksum += w
+
+            checksum = (checksum >> 16) + (checksum & 0xFFFF)
+            checksum = ~checksum & 0xFFFF
+            return checksum
+
     
         def unpack(packetheader):
            header = IP.Header()
@@ -64,9 +67,9 @@ class IP(microinterface):
            flags,
            header.ttl,
            header.protocol,
-           header.header_checksum,
-           header.srcIP,
-           header.dstIP)  = struct.unpack('!BBHHHBBHII',packetheader)
+           header.header_checksum) = struct.unpack('!BBHHHBBH',packetheader[:-8])
+           header.srcIP = packetheader[-8:-8+4]
+           header.dstIP = packetheader[-4:-4+4]
             
            header.version = first & 0b00001111
            header.ihl     = first >> 4 
@@ -83,17 +86,17 @@ class IP(microinterface):
 
     def encapsulate(self, payload):
         self.header.length = len(payload) + self.header.ihl * 4
-        self.header.header_checksum = IP.checksum(self.header.pack())
+        self.header.header_checksum = IP.Header.checksum(self.header)
         Result = self.header.pack() + payload
         self.header.header_checksum = 0
         return Result
     
     def decapsulate(self, packet):
         header = IP.Header.unpack(packet[:IP.Header.MINSIZE])
-        return packet[IP.Header.MINSIZE:]
+        return (header, packet[IP.Header.MINSIZE:])
     
     def resv(self):
-        for packet in self.interface.resv():
+        for (_, packet) in self.interface.resv():
             yield self.decapsulate(packet)
     
     def send(self, payload):

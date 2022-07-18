@@ -34,7 +34,6 @@ class DHCP:
                     key = data[0]
                     if(key == 255):
                         return option
-                        print('done')
                     else:
                       length = data[1]
                       value = data[2:2+length]
@@ -144,7 +143,7 @@ class DHCP:
     def resv(self, parser, timeout = 2):        
         timeouttime = time.time() + timeout
         while(time.time() < timeouttime):                
-            for data in self.interface.resv():
+            for (_, data) in self.interface.resv():
                 if(parser(DHCP.Message.unpack(data))):
                     return True
         return False
