@@ -1,5 +1,6 @@
 from .base import microinterface, microsocket, randbytes
 import struct            
+import time
 
 class HTTP:
     pass
@@ -118,6 +119,7 @@ class DHCP:
         self.message.options[55] = bytearray([1,3,6])
 #        self.message.options[61] = bytearray([0x01]) + self.src.mac
         self.message.options[12] = self.src.hostname.encode()
+        return self.message
     
     def offer(self, message):
         if(self.message.xid == message.xid and message.options[53][0]==DHCP.Message.Options.OFFER):
@@ -130,28 +132,44 @@ class DHCP:
     
     def request(self):
         self.message.options[53] = bytearray([DHCP.Message.Options.REQUEST])
-        self.message.options[50] = self.message.ciadd
-        return self.message.pack()
+        self.message.options[50] = struct.pack('!I',self.message.ciaddr)
+        return self.message
         
-    def acknowledge(self, message):        
+    def acknowledge(self, message):
         if(self.message.xid == message.xid and message.options[53][0]==DHCP.Message.Options.ACK):
             self.message = message
             return True
         return False
     
-    def resv(self):
-        for data in self.interface.resv():
-            yield DHCP.Message.unpack(data)
+    def resv(self, parser, timeout = 2):        
+        timeouttime = time.time() + timeout
+        while(time.time() < timeouttime):                
+            for data in self.interface.resv():
+                if(parser(DHCP.Message.unpack(data))):
+                    return True
+        return False
     
     def send(self, message):
         self.interface.send(message.pack())        
+    
+    def run(self, ntries = 3):
+        dropped = True
+        for _ in range(ntries):
+            self.send(self.discover())
+            if(self.resv(self.offer)):
+                dropped = False
+                break
+        if(dropped): raise Exception("DHCP Discover did not get through")
         
-    def run(self):        
-        self.send(self.discover())
-        for message in self.resv():
-            if(self.offer(message)):
-                break          
-        self.send(self.request())
-        for message in self.resv():
-            if(self.acknowledge(message)):
-                break 
+            
+        dropped = True
+        for _ in range(ntries):
+            self.send(self.request())
+            if(self.resv(self.acknowledge)):
+                dropped = False
+                break
+            
+        if(dropped): raise Exception("DHCP Request did not get through") 
+
+
+

@@ -80,7 +80,7 @@ class UDP(microinterface):
         return Result
 
     def decapsulate(self, segment):
-        self.header = UDP.Header.unpack(segment[:UDP.Header.SIZE])       
+        header = UDP.Header.unpack(segment[:UDP.Header.SIZE])       
         return segment[UDP.Header.SIZE:]  
     
     def resv(self):
