@@ -95,6 +95,17 @@ class TCP:
         protocol = 6 # tcp
         
     class Header:
+        class Flags:
+            NS  = 0b100000000
+            CWR = 0b010000000
+            ECE = 0b001000000
+            URG = 0b000100000
+            ACK = 0b000010000
+            PSH = 0b000001000
+            RST = 0b000000100
+            SYN = 0b000000010
+            FIN = 0b000000001
+                
         SIZE = 20
         
         srcport: 0x16b
@@ -111,20 +122,7 @@ class TCP:
         padding: None
         
 
-        def setflag(self,flag):
-            flagmapper = {
-                'NS':  0b100000000,
-                'CWR': 0b010000000,
-                'ECE': 0b001000000,
-                'URG': 0b000100000,
-                'ACK': 0b000010000,
-                'PSH': 0b000001000,
-                'RST': 0b000000100,
-                'SYN': 0b000000010,
-                'FIN': 0b000000001
-            }
-            if(flag not in Header.flagmapper):
-                self.flag += Header.flagmapper[flag]
+
     
         def unpack(segmentheader):
             header = TCP.Header()
