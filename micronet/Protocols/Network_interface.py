@@ -31,10 +31,10 @@ class ARP(microinterface):
             self.HAL,
             self.PAL,
             self.OP) +\
-            self.S_HA + struct.pack('!I',
-            self.S_L32) +\
-            self.T_HA + struct.pack('!I',
-            self.T_L32)
+            self.S_HA +\
+            self.S_L32+\
+            self.T_HA +\
+            self.T_L32
             
         def unpack(message):
             arp = ARP.Message()
@@ -43,34 +43,36 @@ class ARP(microinterface):
             arp.HAL,
             arp.PAL,
             arp.OP,
-            *_,
-            arp.T_L32) = struct.unpack('!HHBBHQQI',message)
+            *_) = struct.unpack('!HHBBH',message[:8])
             arp.S_HA = message[8:8+6]
-            (arp.S_L32,) = struct.unpack('!I',message[14:14+4])
+            arp.S_L32= message[14:14+4]
             arp.T_HA = message[18:18+6]
+            arp.T_L32 = message[24:24+4]
+
             return arp
         
     def resv(self):
-        for data in self.interface.resv():
-            yield ARP.Message.unpack(data)
+        for (_, data) in self.interface.resv():
+            message = ARP.Message.unpack(data)
+            if(message.T_L32 == self.src.IP and message.T_HA == bytearray([0]*6)):
+                message.T_L32 = message.S_L32
+                message.T_HA  = message.S_HA
+                message.OP = ARP.Message.REPLY
+                self.send(message)
+                
+            if(message.S_HA != b'\x00'*6 and message.S_L32 != b'\x00'*4):
+                yield (message.S_HA, message.S_L32)
     
     def send(self, message):
+        message.S_L32 = self.src.IP
+        message.S_HA  = self.src.mac        
         self.interface.send(message.pack())        
         
-    def request(self):
+    def request(self, IP):
         self.OP = ARP.Message.REQUEST
-        self.message.T_L32 = self.dst.IP
-        self.message.T_HA  = self.dst.mac
-        self.send(self.message)
-                
-
-    def parse(self, message):
-        if(message.T_L32 == self.message.S_L32 and
-           message.T_HA == b'\x00'*6):
-            self.message.T_L32 = message.S_L32
-            self.message.T_HA  = message.S_HA
-        self.send()
-            
+        self.message.T_L32 = IP
+        self.message.T_HA  = bytearray([0,0,0,0,0,0])
+        self.send(self.message)            
         
         
     @microinterface.protocol_wrapper
@@ -108,6 +110,7 @@ class ETH:
         self.header = ETH.Header()
         self.header.dstmac = interface.dst.mac
         self.header.srcmac = interface.src.mac
+        if(interface.ptl == "ARP"): self.header.ethertype = ETH.Header.ARP
 
 
     def encapsulate(self, payload):

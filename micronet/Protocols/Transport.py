@@ -39,8 +39,7 @@ class UDP(microinterface):
             return header
         
     class Header:
-        SIZE = 8
-        
+        SIZE = 8        
         srcport: 0x16b
         dstport: 0x16b
         segmentlength: 0x16b
@@ -73,10 +72,9 @@ class UDP(microinterface):
     def encapsulate(self, payload):
         self.header.segmentlength = len(payload) + UDP.Header.SIZE
         self.pseudoheader.segmentlength = len(payload) + UDP.Header.SIZE
-        self.header.checksum = UDP.checksum(self.pseudoheader.pack() + self.header.pack() + payload)
-        Result = self.header.pack() + payload
         self.header.checksum  = 0
-        return Result
+        self.header.checksum = UDP.checksum(self.pseudoheader.pack() + self.header.pack() + payload)
+        return self.header.pack() + payload
 
     def decapsulate(self, segment):
         header = UDP.Header.unpack(segment[:UDP.Header.SIZE])
@@ -90,21 +88,25 @@ class UDP(microinterface):
         self.interface.send(self.encapsulate(payload))
         
 class TCP:
-    TIMEOUT = 60
+    TIMEOUT = 2
+    MSS  = 500
     checksum = UDP.checksum
-    PseudoHeader = UDP.PseudoHeader
+    class PseudoHeader(UDP.PseudoHeader):
+        protocol = 6 # tcp
         
     class Header:
+        SIZE = 20
+        
         srcport: 0x16b
         dstport: 0x16b
         seqnumber: 0x32b
-        acknumber: 0x32b
-        dataoffset: 0x4b
-        reserved: 0x3b
+        acknumber: 0x32b = 0
+        dataoffset: 0x4b = SIZE//4
+        reserved: 0x3b = 0
         flag: 0x9b = 0
-        window: 0x16b
+        window: 0x16b = 500 #TCP.MSS
         checksum: 0x16b = 0
-        urgent_pointer: 0x16b
+        urgent_pointer: 0x16b = 0
         options: None
         padding: None
         
@@ -127,8 +129,8 @@ class TCP:
         def unpack(segmentheader):
             header = TCP.Header()
             (
-            header.src_port,  
-            header.dst_port,  
+            header.srcport,  
+            header.dstport,  
             header.seqnumber,            
             header.acknumber,    
             dataoffset,        
@@ -143,8 +145,8 @@ class TCP:
         def pack(self):
          return struct.pack(
                     '!HHIIBBHHH',
-                    self.src_port,  
-                    self.dst_port,  
+                    self.srcport,  
+                    self.dstport,  
                     self.seqnumber,            
                     self.acknumber,    
                     self.dataoffset << 4,        
@@ -157,8 +159,24 @@ class TCP:
     @microinterface.protocol_wrapper
     def __init__(self, interface: microinterface):   
         self.header = TCP.Header()
+        self.pseudoheader = TCP.PseudoHeader()
+        (self.header.seqnumber, ) = struct.unpack("I",randbytes(4))
         self.header.srcport = interface.src.port
         self.header.dstport = interface.dst.port
+        self.pseudoheader.srcIP = interface.src.IP
+        self.pseudoheader.dstIP = interface.dst.IP
+    
+    def encapsulate(self, payload):
+        self.header.segmentlength = len(payload) + TCP.Header.SIZE
+        self.pseudoheader.segmentlength = len(payload) + TCP.Header.SIZE
+        self.header.checksum  = 0
+        self.header.checksum = TCP.checksum(self.pseudoheader.pack() + self.header.pack() + payload)
+        return self.header.pack() + payload
+
+    def decapsulate(self, segment):
+        header = UDP.Header.unpack(segment[:UDP.Header.SIZE])
+        return header, segment[UDP.Header.SIZE:]
+    
         
     def resv(self):
         for segment in self.interface.resv():

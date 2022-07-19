@@ -4,6 +4,10 @@ import struct
 
 class IP(microinterface):    
     class Header:
+        class Protocol:
+                TCP = 6
+                UDP = 17
+                ICMP = 1
         MINSIZE = 20
         version: 0x4b = 0x04
         ihl: 0x4b = MINSIZE // 4
@@ -13,18 +17,13 @@ class IP(microinterface):
         flags: 0x3b = 0b010 
         offset: 0x13b = 0
         ttl: 0x8b = 128
-        protocol: 0x8b = 17 # UDP
+        protocol: 0x8b = Protocol.TCP
         header_checksum: 0x16b = 0
         srcIP: 0x32b
         dstIP: 0x32b
         options: None
         padding: None
-        def setprotocol(self,protocol):
-            protocolmapper = {
-                'TCP':  6,
-                'UDP': 17,
-                'ICMP': 1
-            }
+
         def pack(self):
          return struct.pack('!BBHHHBBH',
           (self.version << 4) +\
@@ -83,6 +82,7 @@ class IP(microinterface):
         self.header.srcIP = self.src.IP
         self.header.dstIP = self.dst.IP
         (self.header.id,) = struct.unpack('!H',randbytes(2))
+        if(interface.ptl == 'UDP'): self.header.protocol = IP.Header.Protocol.UDP
 
     def encapsulate(self, payload):
         self.header.length = len(payload) + self.header.ihl * 4

@@ -1,4 +1,4 @@
-from .base import microinterface, microsocket, randbytes
+from .base import microinterface, microsocket, randbytes, Timeout
 import struct            
 import time
 
@@ -51,10 +51,10 @@ class DHCP:
         xid:      0x4b*8
         secs:     0x2b*8 = 0
         flags:    0x2b*8 = 0
-        ciaddr:   0x4b*8 = 0
-        yiaddr:   0x4b*8 = 0
-        siaddr:   0x4b*8 = 0
-        giaddr:   0x4b*8 = 0
+        ciaddr:   0x4b*8 = bytearray([0,0,0,0])
+        yiaddr:   0x4b*8 = bytearray([0,0,0,0])
+        siaddr:   0x4b*8 = bytearray([0,0,0,0])
+        giaddr:   0x4b*8 = bytearray([0,0,0,0])
         chaddr:   0x16b*8
         sname:    0x64b*8 = b'\x00' * 64
         file:     0x128b*8= b'\x00' * 128
@@ -65,18 +65,18 @@ class DHCP:
             self.options = DHCP.Message.Options()
             
         def pack(self):
-            return struct.pack("!BBBBIHHIIII",
+            return struct.pack("!BBBBIHH",
                self.op, 
                self.htype,  
                self.hlen, 
                self.hops, 
                self.xid, 
                self.secs, 
-               self.flags, 
-               self.ciaddr, 
-               self.yiaddr, 
-               self.siaddr, 
-               self.giaddr) +\
+               self.flags) +\
+               self.ciaddr +\
+               self.yiaddr +\
+               self.siaddr +\
+               self.giaddr +\
                self.chaddr +\
                self.sname +\
                self.file +\
@@ -91,11 +91,11 @@ class DHCP:
             message.hops, 
             message.xid, 
             message.secs, 
-            message.flags, 
-            message.ciaddr, 
-            message.yiaddr, 
-            message.siaddr, 
-            message.giaddr) = struct.unpack("!BBBBIHHIIII", data[:28])
+            message.flags) = struct.unpack("!BBBBIHH", data[:12])
+            message.ciaddr = data[12:12+4]
+            message.yiaddr = data[16:16+4]
+            message.siaddr = data[20:20+4]
+            message.giaddr = data[24:24+4]
             message.chaddr = data[28:28+16]
             message.sname = data[44:44+64]
             message.file = data[108:108+128]
@@ -131,7 +131,7 @@ class DHCP:
     
     def request(self):
         self.message.options[53] = bytearray([DHCP.Message.Options.REQUEST])
-        self.message.options[50] = struct.pack('!I',self.message.ciaddr)
+        self.message.options[50] = self.message.ciaddr
         return self.message
         
     def acknowledge(self, message):
@@ -140,35 +140,30 @@ class DHCP:
             return True
         return False
     
-    def resv(self, parser, timeout = 2):        
-        timeouttime = time.time() + timeout
-        while(time.time() < timeouttime):                
-            for (_, data) in self.interface.resv():
-                if(parser(DHCP.Message.unpack(data))):
-                    return True
-        return False
-    
     def send(self, message):
         self.interface.send(message.pack())        
     
-    def run(self, ntries = 3):
-        dropped = True
+    def resv(self):
+        for (_, data) in self.interface.resv():
+            yield DHCP.Message.unpack(data)       
+
+    def run(self, ntries = 6):
+            
+        T = Timeout(timeout = 1)(self.offer)
         for _ in range(ntries):
             self.send(self.discover())
-            if(self.resv(self.offer)):
-                dropped = False
+            if(T.wait(self.resv())):
                 break
-        if(dropped): raise Exception("DHCP Discover did not get through")
+            
+        if(T.status == False): raise Exception("DHCP Discover did not get through")
         
             
-        dropped = True
+        T = Timeout(timeout = 1)(self.acknowledge)
         for _ in range(ntries):
             self.send(self.request())
-            if(self.resv(self.acknowledge)):
-                dropped = False
-                break
+            if(T.wait(self.resv())):break
             
-        if(dropped): raise Exception("DHCP Request did not get through") 
+        if(T.status == False): raise Exception("DHCP Request did not get through") 
 
 
 
