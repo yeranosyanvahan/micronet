@@ -17,7 +17,7 @@ setup(
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: Implementation :: MicroPython',
-        'License :: OSI Approved :: MIT License',
+        'License :: MIT License',
     ],
     setuptools_git_versioning={
         "enabled": True,
